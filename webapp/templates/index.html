@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor DOCX a Markdown</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2em;
+        }
+
+        .container {
+            background: white;
+            max-width: 500px;
+            width: 100%;
+            padding: 3em 2.5em;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            font-size: 1.8em;
+            margin-bottom: 0.5em;
+            text-align: center;
+        }
+
+        h1::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0.5em auto 0;
+            border-radius: 2px;
+        }
+
+        form {
+            margin-top: 2em;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 1.5em;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 1.2em;
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .file-input-label:hover {
+            background: #f0f1ff;
+            border-color: #764ba2;
+        }
+
+        .file-input-label.file-selected {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            border-style: solid;
+        }
+
+        .file-input-label.file-selected::before {
+            content: '✅';
+        }
+
+        .file-input-label::before {
+            content: '📄';
+            display: block;
+            font-size: 2.5em;
+            margin-bottom: 0.3em;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 1em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button[type="submit"]:active {
+            transform: translateY(0);
+        }
+
+        .result {
+            margin-top: 2em;
+            display: none;
+        }
+
+        .result:not(:empty) {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .htmx-request .file-input-label {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .htmx-request button {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .result a {
+            display: block;
+            padding: 1.2em;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.05em;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result a::before {
+            content: '⬇️';
+            margin-right: 0.5em;
+            font-size: 1.2em;
+        }
+
+        .result a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
+        }
+
+        .result a:active {
+            transform: translateY(0);
+        }
+
+        .result a::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .result a:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+        
+        /* Mensaje de error */
+        .result p.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+            padding: 1.2em;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 2em 1.5em;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Conversor .DOCX a .MD</h1>
+    <form id="formulario" hx-post="/convertir/" hx-encoding="multipart/form-data" hx-target="#resultado" hx-swap="innerHTML">
+        <div class="file-input-wrapper">
+            <input type="file" name="docx" id="docx" accept=".docx" required>
+            <label for="docx" class="file-input-label">
+                Selecciona tu archivo DOCX
+            </label>
+        </div>
+        <button type="submit">Convertir y descargar ZIP</button>
+    </form>
+    <div id="resultado" class="result"></div>
+</div>
+<script>
+    document.getElementById('docx').addEventListener('change', function(e) {
+        const label = document.querySelector('.file-input-label');
+        const fileName = e.target.files[0]?.name;
+        
+        if (fileName) {
+            label.textContent = fileName;
+            label.classList.add('file-selected');
+        } else {
+            label.textContent = 'Selecciona tu archivo DOCX';
+            label.classList.remove('file-selected');
+        }
+    });
+
+    // Opcional: Limpiar el resultado si el usuario cambia el archivo
+    // después de una conversión
+    document.getElementById('docx').addEventListener('click', function(e) {
+         const resultDiv = document.getElementById('resultado');
+         if (resultDiv.innerHTML !== "") {
+             resultDiv.innerHTML = "";
+             
+             // Resetear el label
+             const label = document.querySelector('.file-input-label');
+             label.textContent = 'Selecciona tu archivo DOCX';
+             label.classList.remove('file-selected');
+             
+             // Limpiar el valor del input (esto es un poco hacky pero funciona)
+             e.target.value = null;
+         }
+    });
+
+    // Limpiar el nombre del archivo si se resetea el form
+    document.getElementById('formulario').addEventListener('htmx:afterSwap', function(e) {
+        // Si la respuesta fue un error, no reseteamos el input
+        // Así el usuario no tiene que volver a seleccionarlo
+        const errorEl = e.detail.target.querySelector("p.error");
+        if (errorEl) {
+            return;
+        }
+        
+        // Si fue exitoso, reseteamos el form y el label
+        document.getElementById('formulario').reset();
+        const label = document.querySelector('.file-input-label');
+        label.textContent = 'Selecciona tu archivo DOCX';
+        label.classList.remove('file-selected');
+    });
+
+</script>
+</body>
+</html>
