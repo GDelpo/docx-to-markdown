@@ -1,10 +1,10 @@
 # docx-to-markdown
 
 <p>
-  <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white">
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.119-009688?logo=fastapi&logoColor=white">
+  <img alt="Python" src="https://img.shields.io/badge/python-3.14%2B-blue?logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.162-009688?logo=fastapi&logoColor=white">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
-  <img alt="Status" src="https://img.shields.io/badge/status-stable-green">
+  <img alt="CI" src="https://github.com/GDelpo/docx-to-markdown/actions/workflows/ci.yml/badge.svg">
 </p>
 
 > Convierte archivos `.docx` a Markdown preservando imágenes y estructura. Webapp + CLI.
@@ -21,7 +21,7 @@
 
 ### Requirements
 
-- Python 3.11+
+- Python 3.14+
 - `pip`
 
 ### Install
@@ -65,6 +65,15 @@ Genera el `.md` y una carpeta `assets/` con las imágenes al lado del archivo de
 docker build -t docx-to-markdown .
 docker run --rm -p 8000:8000 docx-to-markdown
 ```
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+Cubren el endpoint de subida: nombres de archivo maliciosos, extensiones no permitidas, documentos inválidos y una conversión completa.
 
 ## Architecture
 

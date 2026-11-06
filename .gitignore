@@ -47,3 +47,4 @@ Thumbs.db
 # Project-specific — local test output
 /test_output/
 tmp/
+webapp/resultados/

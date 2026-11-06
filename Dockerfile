@@ -1,6 +1,6 @@
 # Etapa 1: Usar una imagen base oficial de Python.
 # Usamos la versión 'slim' que es más ligera, ideal para producción.
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Establecer el directorio de trabajo dentro del contenedor.
 # Todos los comandos siguientes se ejecutarán desde esta ruta.

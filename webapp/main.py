@@ -2,13 +2,12 @@ from fastapi import FastAPI, UploadFile, File, Request, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 import shutil
-import os
 import tempfile
 import zipfile
 import logging
 import uuid
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import quote_plus
 from conversor import convertir_docx_a_markdown_con_imagenes
 
@@ -23,6 +22,15 @@ templates = Jinja2Templates(directory="webapp/templates")
 BASE_DIR = Path(__file__).parent
 RESULTADOS_DIR = BASE_DIR / "resultados"
 RESULTADOS_DIR.mkdir(exist_ok=True)
+
+
+def nombre_base_seguro(filename: str | None) -> str:
+    """Devuelve el nombre sin extensión y sin ruta, o HTTP 400 si no es un .docx."""
+    # INTENTIONAL: se normaliza "\\" a "/" porque en Linux PurePath no lo toma como separador y el cliente lo controla.
+    nombre = PurePosixPath((filename or "").replace("\\", "/")).name
+    if not nombre.lower().endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Solo se aceptan archivos .docx")
+    return re.sub(r"[^\w-]", "_", nombre[: -len(".docx")]) or "documento"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -41,10 +49,9 @@ async def convertir(request: Request, docx: UploadFile = File(...)):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
 
-            # 1. Guardar el archivo subido de forma segura
-            # Usamos un nombre genérico dentro del temp, aunque guardar el original también es seguro aquí.
-            original_filename = docx.filename
-            docx_path = tmp_path / original_filename
+            # 1. Guardar el archivo subido: el nombre del cliente nunca decide la ruta.
+            safe_base_name = nombre_base_seguro(docx.filename)
+            docx_path = tmp_path / f"{safe_base_name}.docx"
 
             with docx_path.open("wb") as buffer:
                 shutil.copyfileobj(docx.file, buffer)
@@ -60,11 +67,6 @@ async def convertir(request: Request, docx: UploadFile = File(...)):
             # --- Fin Recomendación ---
 
             # 2. Definir nombres y rutas (basado en tu lógica original, pero seguro)
-            # Usamos Path.stem para obtener el nombre base sin extensión
-            original_base_name = Path(original_filename).stem
-            # Sanitizamos el nombre para usarlo en el zip
-            safe_base_name = re.sub(r"[^\w-]", "_", original_base_name)
-
             md_file_name = f"{safe_base_name}.md"
             md_path = tmp_path / md_file_name
 
@@ -111,16 +113,18 @@ async def convertir(request: Request, docx: UploadFile = File(...)):
                 content=f'<a href="{href}" class="btn-descarga">Descargar {download_zip_name}</a>'
             )
 
+    except HTTPException as e:
+        return HTMLResponse(content=f'<p class="error">Error: {e.detail}.</p>', status_code=e.status_code)
     except FileNotFoundError as e:
         logger.warning(f"Error de conversión (archivo no encontrado): {e}")
         return HTMLResponse(
-            content=f'<p class="error">Error: No se pudo generar el archivo. ¿El .docx es válido?</p>',
+            content='<p class="error">Error: No se pudo generar el archivo. ¿El .docx es válido?</p>',
             status_code=400,  # Bad Request
         )
     except Exception as e:
         logger.error(f"Error inesperado en /convertir: {e}", exc_info=True)
         return HTMLResponse(
-            content=f'<p class="error">Error interno del servidor. Intente de nuevo.</p>',
+            content='<p class="error">Error interno del servidor. Intente de nuevo.</p>',
             status_code=500,  # Internal Server Error
         )
 
